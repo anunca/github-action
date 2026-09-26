@@ -1,0 +1,73 @@
+name: Clean GitHub Actions resources
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+    inputs:
+      resources:
+        description: Resources to remove
+        required: true
+        type: choice
+        default: all
+        options:
+          - all
+          - workflow-runs
+          - run-logs
+          - artifacts
+          - caches
+      retention_days:
+        description: Remove resources older than this many days
+        required: true
+        type: number
+        default: 1
+      dry_run:
+        description: List matches without deleting them
+        required: true
+        type: boolean
+        default: true
+      include_archived:
+        description: Also process archived repositories
+        required: true
+        type: boolean
+        default: false
+      excluded_repositories:
+        description: Comma-separated repository names or owner/name values
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: account-actions-cleanup
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ secrets.ACTIONS_ADMIN_TOKEN }}
+      OWNER: ${{ github.repository_owner }}
+      RESOURCE_SCOPE: ${{ github.event_name == 'workflow_dispatch' && inputs.resources || 'all' }}
+      RETENTION_DAYS: ${{ github.event_name == 'workflow_dispatch' && inputs.retention_days || 1 }}
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
+      INCLUDE_ARCHIVED: ${{ github.event_name == 'workflow_dispatch' && inputs.include_archived || false }}
+      EXCLUDED_REPOSITORIES: ${{ github.event_name == 'workflow_dispatch' && inputs.excluded_repositories || '' }}
+
+    steps:
+      - name: Check out cleanup code
+        uses: actions/checkout@v7
+
+      - name: Validate token
+        run: |
+          if [[ -z "${GH_TOKEN:-}" ]]; then
+            echo "Repository secret ACTIONS_ADMIN_TOKEN is not configured." >&2
+            exit 1
+          fi
+          gh auth status
+
+      - name: Discover repositories and clean resources
+        run: bash sh/cleanup-actions.sh

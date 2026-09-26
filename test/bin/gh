@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+args="$*"
+
+case "$args" in
+  "api user --jq .login")
+    echo "anunca"
+    ;;
+  *"/user/repos?affiliation=owner"*)
+    printf 'anunca/no-expired-resources\tfalse\n'
+    printf 'anunca/with-actions\tfalse\n'
+    printf 'anunca/without-actions\tfalse\n'
+    ;;
+  *"repos/anunca/with-actions/actions/artifacts?per_page=100"*)
+    printf '101\t2020-01-01T00:00:00Z\told-artifact\n'
+    printf '102\t2999-01-01T00:00:00Z\tnew-artifact\n'
+    ;;
+  *"repos/anunca/with-actions/actions/caches?per_page=100"*)
+    printf '201\t2020-01-01T00:00:00Z\told-cache\trefs/heads/main\n'
+    printf '202\t2999-01-01T00:00:00Z\tnew-cache\trefs/heads/main\n'
+    ;;
+  *"repos/anunca/with-actions/actions/runs?per_page=100&status=completed"*)
+    printf '301\t2020-01-01T00:00:00Z\tcompleted\told-run\n'
+    printf '302\t2999-01-01T00:00:00Z\tcompleted\tnew-run\n'
+    ;;
+  *"repos/anunca/no-expired-resources/actions/workflows?per_page=1"*)
+    echo "1"
+    ;;
+  *"repos/anunca/no-expired-resources/actions/runs?per_page=1"*)
+    echo "1"
+    ;;
+  *"repos/anunca/no-expired-resources/actions/artifacts?per_page=1"*)
+    echo "0"
+    ;;
+  *"repos/anunca/no-expired-resources/actions/caches?per_page=1"*)
+    echo "0"
+    ;;
+  *"repos/anunca/no-expired-resources/actions/runs?per_page=100&status=completed"*)
+    printf '401\t2999-01-01T00:00:00Z\tcompleted\tnew-run\n'
+    ;;
+  *"repos/anunca/no-expired-resources/actions/artifacts?per_page=100"*|*"repos/anunca/no-expired-resources/actions/caches?per_page=100"*)
+    ;;
+  *"repos/anunca/without-actions/actions/"*"total_count"*)
+    echo "0"
+    ;;
+  *"repos/anunca/with-actions/actions/workflows?per_page=1"*)
+    echo "1"
+    ;;
+  *"repos/anunca/with-actions/actions/runs?per_page=1"*)
+    echo "2"
+    ;;
+  *"repos/anunca/with-actions/actions/artifacts?per_page=1"*)
+    echo "2"
+    ;;
+  *"repos/anunca/with-actions/actions/caches?per_page=1"*)
+    echo "2"
+    ;;
+  *"--method DELETE"*)
+    echo "A dry run unexpectedly called a delete endpoint." >&2
+    exit 99
+    ;;
+  *)
+    echo "Unexpected mock gh call: $args" >&2
+    exit 98
+    ;;
+esac
